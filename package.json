@@ -1,0 +1,94 @@
+{
+  "name": "effect-form",
+  "version": "0.1.0",
+  "description": "Give it a Schema.Struct built out of domain types and it draws the fields",
+  "keywords": [
+    "effect",
+    "effect-ts",
+    "form",
+    "forms",
+    "schema",
+    "validation",
+    "typescript"
+  ],
+  "author": "Marko Savic",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/savkelita/effect-form.git"
+  },
+  "homepage": "https://github.com/savkelita/effect-form#readme",
+  "bugs": {
+    "url": "https://github.com/savkelita/effect-form/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./Annotation": {
+      "types": "./dist/Annotation.d.ts",
+      "import": "./dist/Annotation.mjs",
+      "require": "./dist/Annotation.js"
+    },
+    "./Form": {
+      "types": "./dist/Form.d.ts",
+      "import": "./dist/Form.mjs",
+      "require": "./dist/Form.js"
+    },
+    "./Locals": {
+      "types": "./dist/Locals.d.ts",
+      "import": "./dist/Locals.mjs",
+      "require": "./dist/Locals.js"
+    },
+    "./Path": {
+      "types": "./dist/Path.d.ts",
+      "import": "./dist/Path.mjs",
+      "require": "./dist/Path.js"
+    },
+    "./TypeInfo": {
+      "types": "./dist/TypeInfo.d.ts",
+      "import": "./dist/TypeInfo.mjs",
+      "require": "./dist/TypeInfo.js"
+    },
+    "./Validation": {
+      "types": "./dist/Validation.d.ts",
+      "import": "./dist/Validation.mjs",
+      "require": "./dist/Validation.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.check.json",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "prepublishOnly": "npm run check"
+  },
+  "peerDependencies": {
+    "effect": "^3.19.15"
+  },
+  "devDependencies": {
+    "effect": "3.19.16",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
