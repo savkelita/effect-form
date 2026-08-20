@@ -11,7 +11,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20, 22]
+        # The toolchain sets the floor, not the package: vite 7 (through vitest) needs
+        # ^20.19 || >=22.12. The built output is ES2022 and runs on older Node.
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
