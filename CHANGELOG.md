@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 
 While the major version is `0`, a minor bump may carry a breaking change.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-19
 
 Requires Effect 4.0 (`effect` `~4.0.0`).
 
@@ -45,5 +45,5 @@ First public release.
 - `Locals` — the contract a template receives, typed by the form value.
 - `Path` — `equals`, `isPrefix`, `toId`, `toName`, `humanize`.
 
-[unreleased]: https://github.com/savkelita/effect-form/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/savkelita/effect-form/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/savkelita/effect-form/releases/tag/v0.1.0
