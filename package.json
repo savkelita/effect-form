@@ -1,6 +1,6 @@
 {
   "name": "effect-form",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Give it a Schema.Struct built out of domain types and it draws the fields",
   "keywords": [
     "effect",
