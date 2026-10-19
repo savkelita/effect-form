@@ -13,8 +13,9 @@
   ],
   "author": "Marko Savic",
   "license": "MIT",
+  "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "repository": {
     "type": "git",
@@ -29,43 +30,35 @@
   },
   "sideEffects": false,
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "default": "./dist/index.js"
     },
     "./Annotation": {
       "types": "./dist/Annotation.d.ts",
-      "import": "./dist/Annotation.mjs",
-      "require": "./dist/Annotation.js"
+      "default": "./dist/Annotation.js"
     },
     "./Form": {
       "types": "./dist/Form.d.ts",
-      "import": "./dist/Form.mjs",
-      "require": "./dist/Form.js"
+      "default": "./dist/Form.js"
     },
     "./Locals": {
       "types": "./dist/Locals.d.ts",
-      "import": "./dist/Locals.mjs",
-      "require": "./dist/Locals.js"
+      "default": "./dist/Locals.js"
     },
     "./Path": {
       "types": "./dist/Path.d.ts",
-      "import": "./dist/Path.mjs",
-      "require": "./dist/Path.js"
+      "default": "./dist/Path.js"
     },
     "./TypeInfo": {
       "types": "./dist/TypeInfo.d.ts",
-      "import": "./dist/TypeInfo.mjs",
-      "require": "./dist/TypeInfo.js"
+      "default": "./dist/TypeInfo.js"
     },
     "./Validation": {
       "types": "./dist/Validation.d.ts",
-      "import": "./dist/Validation.mjs",
-      "require": "./dist/Validation.js"
+      "default": "./dist/Validation.js"
     }
   },
   "files": [
@@ -83,12 +76,12 @@
     "prepublishOnly": "npm run check"
   },
   "peerDependencies": {
-    "effect": "^3.19.15"
+    "effect": "~4.0.0"
   },
   "devDependencies": {
-    "effect": "3.19.16",
+    "effect": "4.0.5",
     "tsup": "^8.0.0",
-    "typescript": "^5.7.0",
+    "typescript": "^5.9.0",
     "vitest": "^3.0.0"
   }
 }

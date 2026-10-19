@@ -6,7 +6,7 @@
  *
  * @since 0.0.0
  */
-import { Option, Schema, SchemaAST as AST } from 'effect'
+import { Option, type Schema, SchemaAST as AST } from 'effect'
 import * as Annotation from './Annotation'
 import type { Locals, StructLocals, StructTemplate } from './Locals'
 import * as Path from './Path'
@@ -70,7 +70,7 @@ const defaultCtx: Ctx = { idPrefix: 'ef', disabled: false, auto: 'labels' }
  * @category Model
  */
 export interface RenderProps<A, I, R, V, Dom> {
-  readonly schema: Schema.Schema<A, I, R>
+  readonly schema: Schema.Codec<A, I, R, unknown>
   /**
    * The FORM value, wider than `A`, because a field may be empty while it is being filled
    * in. The application declares it itself.
@@ -150,7 +150,7 @@ export const make = <Dom>() => {
     }
 
     // No template on the type: a container. Children are drawn, then handed to the layout.
-    if (AST.isTypeLiteral(info.innerAst)) {
+    if (AST.isObjects(info.innerAst)) {
       const layout = options.template
       if (layout === undefined) return missing(path, 'Struct')
 

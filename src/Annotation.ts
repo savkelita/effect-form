@@ -5,7 +5,7 @@
  *
  * @since 0.0.0
  */
-import { Option, Schema, SchemaAST as AST } from 'effect'
+import { Option, type Schema, type SchemaAST as AST } from 'effect'
 import type { Locals } from './Locals'
 
 /**
@@ -35,13 +35,18 @@ const MessageId = Symbol.for('effect-form/annotation/Message')
 const AttrsId = Symbol.for('effect-form/annotation/Attrs')
 const LabelId = Symbol.for('effect-form/annotation/Label')
 
+// Effect types annotation keys as strings; the symbols survive at runtime, and keep the
+// form's keys apart from Effect's own.
+const annotate = <S extends Schema.Top>(self: S, key: symbol, value: unknown): S['Rebuild'] =>
+  self.annotate({ [key]: value } as Schema.Annotations.Bottom<S['Type'], S['~type.parameters']>)
+
 /**
  * Attaches a template to a domain type.
  *
  * @example
  * ```ts
  * export const vForm = Schema.String.pipe(
- *   Schema.maxLength(80),
+ *   Schema.check(Schema.isMaxLength(80)),
  *   Annotation.template(nameTemplate),
  * )
  * ```
@@ -51,8 +56,8 @@ const LabelId = Symbol.for('effect-form/annotation/Label')
  */
 export const template =
   <V, Dom, O = unknown>(tpl: Template<V, Dom, O>) =>
-  <A, I extends V, R>(self: Schema.Schema<A, I, R>): Schema.Schema<A, I, R> =>
-    self.annotations({ [TemplateId]: tpl })
+  <S extends Schema.Top & { readonly Encoded: V }>(self: S): S['Rebuild'] =>
+    annotate(self, TemplateId, tpl)
 
 /**
  * Attaches an error message to a domain type. Returning `undefined` keeps the message
@@ -63,23 +68,22 @@ export const template =
  */
 export const message =
   <V>(msg: Message<V>) =>
-  <A, I extends V, R>(self: Schema.Schema<A, I, R>): Schema.Schema<A, I, R> =>
-    self.annotations({ [MessageId]: msg })
+  <S extends Schema.Top & { readonly Encoded: V }>(self: S): S['Rebuild'] =>
+    annotate(self, MessageId, msg)
 
 /**
  * Default label of a domain type.
  *
- * Deliberately not `Schema.annotations({ title })`: `Schema.maxLength(80)` and the other
- * constraint combinators write their description there (`"maxLength(80)"`) and would
- * overwrite the label.
+ * Deliberately a key of its own rather than `Schema.annotate({ title })`, so nothing
+ * Effect writes into a schema's annotations can overwrite the label.
  *
  * @since 0.0.0
  * @category Combinators
  */
 export const label =
   (text: string) =>
-  <A, I, R>(self: Schema.Schema<A, I, R>): Schema.Schema<A, I, R> =>
-    self.annotations({ [LabelId]: text })
+  <S extends Schema.Top>(self: S): S['Rebuild'] =>
+    annotate(self, LabelId, text)
 
 /**
  * Default attrs of a domain type; the screen adds to them through `options`.
@@ -89,32 +93,67 @@ export const label =
  */
 export const attrs =
   (value: Readonly<Record<string, unknown>>) =>
-  <A, I, R>(self: Schema.Schema<A, I, R>): Schema.Schema<A, I, R> =>
-    self.annotations({ [AttrsId]: value })
+  <S extends Schema.Top>(self: S): S['Rebuild'] =>
+    annotate(self, AttrsId, value)
+
+/**
+ * A node's annotation layers, outermost first. A check takes the annotations given after
+ * it, so the last check is the outermost layer and the node's own annotations the innermost.
+ */
+type Layer = Readonly<Record<symbol, unknown>>
+
+const layers = (ast: AST.AST): ReadonlyArray<Layer> => {
+  const out: Array<Layer> = []
+  for (const check of [...(ast.checks ?? [])].reverse()) {
+    if (check.annotations !== undefined) out.push(check.annotations as Layer)
+  }
+  if (ast.annotations !== undefined) out.push(ast.annotations as Layer)
+  return out
+}
+
+const has = (layer: Layer, key: symbol): boolean => Object.prototype.hasOwnProperty.call(layer, key)
+
+const outermost =
+  <T>(key: symbol) =>
+  (ast: AST.AST): Option.Option<T> => {
+    const layer = layers(ast).find(l => has(l, key))
+    return layer === undefined ? Option.none() : Option.some(layer[key] as T)
+  }
 
 /**
  * @since 0.0.0
  * @category Getters
  */
 export const getTemplate: (ast: AST.AST) => Option.Option<Template<never, unknown>> =
-  AST.getAnnotation<Template<never, unknown>>(TemplateId)
+  outermost<Template<never, unknown>>(TemplateId)
 
 /**
  * @since 0.0.0
  * @category Getters
  */
-export const getMessage: (ast: AST.AST) => Option.Option<Message<never>> =
-  AST.getAnnotation<Message<never>>(MessageId)
+export const getMessage: (ast: AST.AST) => Option.Option<Message<never>> = outermost<Message<never>>(MessageId)
+
+/**
+ * Attrs are a record, so the layers of a node merge instead of shadowing; the outermost
+ * wins per key.
+ *
+ * @since 0.0.0
+ * @category Getters
+ */
+export const getAttrs = (ast: AST.AST): Option.Option<Readonly<Record<string, unknown>>> => {
+  const found = layers(ast).filter(l => has(l, AttrsId))
+  return found.length === 0
+    ? Option.none()
+    : Option.some(
+        found.reduceRight<Record<string, unknown>>(
+          (acc, l) => ({ ...acc, ...(l[AttrsId] as Readonly<Record<string, unknown>>) }),
+          {},
+        ),
+      )
+}
 
 /**
  * @since 0.0.0
  * @category Getters
  */
-export const getAttrs: (ast: AST.AST) => Option.Option<Readonly<Record<string, unknown>>> =
-  AST.getAnnotation<Readonly<Record<string, unknown>>>(AttrsId)
-
-/**
- * @since 0.0.0
- * @category Getters
- */
-export const getLabel: (ast: AST.AST) => Option.Option<string> = AST.getAnnotation<string>(LabelId)
+export const getLabel: (ast: AST.AST) => Option.Option<string> = outermost<string>(LabelId)
