@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Schema, SchemaTransformation } from 'effect'
 import { describe, expect, it } from 'vitest'
 import * as Annotation from '../src/Annotation'
 import * as Form from '../src/Form'
@@ -30,16 +30,16 @@ const text =
   }
 
 const Name = Schema.String.pipe(
-  Schema.maxLength(80),
+  Schema.check(Schema.isMaxLength(80)),
   Annotation.template(text<string | null>('Text')),
   Annotation.message((v: string | null) => (v === null ? 'This field is required' : undefined)),
 )
 
-const Int = Schema.Number.pipe(Schema.int(), Annotation.template(text<number | null>('SpinButton')))
+const Int = Schema.Number.pipe(Schema.check(Schema.isInt()), Annotation.template(text<number | null>('SpinButton')))
 
 /** A domain type carrying its own default label, non-ASCII included. */
 const TaxId = Schema.String.pipe(
-  Schema.pattern(/^\d{9}$/),
+  Schema.check(Schema.isPattern(/^\d{9}$/)),
   Annotation.label('Tax ID №'),
   Annotation.template(text<string | null>('Text')),
 )
@@ -75,7 +75,7 @@ const layout =
 const vForm = Schema.Struct({
   name: Name,
   website: Schema.NullOr(Name),
-  email: Name.pipe(Schema.filter(s => (s.includes('@') ? undefined : 'not an email'))),
+  email: Name.pipe(Schema.check(Schema.makeFilter((s: string) => (s.includes('@') ? undefined : 'not an email')))),
   stateShare: Int,
   municipality: Municipality,
 })
@@ -159,8 +159,8 @@ describe('Form', () => {
       expect(draw()).toContain('[SpinButton name=stateShare')
     })
 
-    // Schema.maxLength/pattern write the constraint description into `title`, so the label
-    // needs a key of its own — otherwise this would read "pattern(...)".
+    // The label has a key of its own, so nothing Effect writes into a schema's annotations
+    // can overwrite it.
     it('uses the domain type default label', () => {
       const s = Schema.Struct({ taxId: TaxId })
       const out = render({
@@ -180,10 +180,12 @@ describe('Form', () => {
 
   describe('descent to the domain type', () => {
     // The form holds the ENCODED value, so the descent goes towards `from`.
-    const Price = Schema.transform(
-      Schema.String.pipe(Annotation.template(text<string | null>('Text'))),
-      Schema.Number,
-      { strict: true, decode: (s: string) => Number(s), encode: (n: number) => String(n) },
+    const Price = Schema.String.pipe(
+      Annotation.template(text<string | null>('Text')),
+      Schema.decodeTo(
+        Schema.Number,
+        SchemaTransformation.transform({ decode: (s: string) => Number(s), encode: (n: number) => String(n) }),
+      ),
     )
 
     it('finds the template through a transformation', () => {
@@ -208,7 +210,7 @@ describe('Form', () => {
         Annotation.message(() => 'from the domain type'),
       )
       const WorkEmail = Email.pipe(
-        Schema.filter(s => (s.includes('@') ? undefined : 'not an email')),
+        Schema.check(Schema.makeFilter((s: string) => (s.includes('@') ? undefined : 'not an email'))),
         Annotation.message(() => 'from the narrower rule'),
       )
       const r = Validation.validate(Schema.Struct({ email: WorkEmail }), { email: 'abc' })
@@ -219,10 +221,12 @@ describe('Form', () => {
     // The form holds the ENCODED value, so a text widget belongs on a schema that
     // validates to a number.
     it('takes a template typed by the encoded side', () => {
-      const Quantity = Schema.transform(
-        Schema.Trim.pipe(Schema.nonEmptyString(), Schema.pattern(/^-?\d+$/)),
-        Schema.Number,
-        { strict: true, decode: (s: string) => Number(s), encode: (n: number) => String(n) },
+      const Quantity = Schema.Trim.pipe(
+        Schema.check(Schema.isNonEmpty(), Schema.isPattern(/^-?\d+$/)),
+        Schema.decodeTo(
+          Schema.Number,
+          SchemaTransformation.transform({ decode: (s: string) => Number(s), encode: (n: number) => String(n) }),
+        ),
       ).pipe(
         Annotation.template(text<string | null>('Text')),
         Annotation.message((v: string | null) => (v === null ? 'This field is required' : undefined)),
@@ -246,7 +250,7 @@ describe('Form', () => {
     })
 
     it('reports a literal union once, not once per literal', () => {
-      const Role = Schema.Literal('admin', 'editor', 'user').pipe(
+      const Role = Schema.Literals(['admin', 'editor', 'user']).pipe(
         Annotation.template(text<string | null>('Select')),
         Annotation.message((v: string | null) => (v === null ? 'This field is required' : undefined)),
       )
@@ -256,9 +260,10 @@ describe('Form', () => {
     })
 
     it('keeps different messages on the same path', () => {
-      const r = Validation.validate(Schema.Struct({ x: Schema.Union(Schema.Number, Schema.Boolean) }), {
-        x: 'a',
-      })
+      const r = Validation.validate(
+        Schema.Struct({ x: Schema.String.pipe(Schema.check(Schema.isMinLength(5), Schema.isPattern(/^\d+$/))) }),
+        { x: 'ab' },
+      )
       if (r.isValid) throw new Error('expected a failure')
       expect(r.issues.map(i => i.path)).toEqual([['x'], ['x']])
       expect(new Set(r.issues.map(i => i.message)).size).toBe(2)

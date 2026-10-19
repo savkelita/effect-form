@@ -8,6 +8,25 @@ While the major version is `0`, a minor bump may carry a breaking change.
 
 ## [Unreleased]
 
+Requires Effect 4.0 (`effect` `~4.0.0`).
+
+### Breaking
+
+- `effect` peer dependency is `~4.0.0` (was `^3.19.15`), so the schemas passed in are
+  Effect 4 schemas. TypeScript 5.9 or newer, as Effect 4 requires.
+- ESM only, like Effect 4: `"type": "module"`, every `exports` entry is `{ types, default }`,
+  and the CommonJS build and the `module` field are gone. `engines.node` is
+  `^20.19.0 || >=22.12.0` (was `>=18.0.0`); `require('effect-form')` works only through
+  Node's `require(esm)`.
+- `Validation.fromParseError` takes Effect 4's `Schema.SchemaError`; Effect 4 has no
+  `ParseError`. The `schema` of `Form.render` and `Validation.validate` is a `Schema.Codec`.
+
+### Changed
+
+- `Validation` — the messages Effect produces are Effect 4's wording, and a value that
+  matches no member of a union is one issue, not one per member. A domain type's own
+  message still overrides either.
+
 ## [0.1.0] - 2026-08-20
 
 First public release.

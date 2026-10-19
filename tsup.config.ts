@@ -10,7 +10,7 @@ export default defineConfig({
     'src/TypeInfo.ts',
     'src/Validation.ts',
   ],
-  format: ['cjs', 'esm'],
+  format: ['esm'],
   dts: true,
   clean: true,
   sourcemap: true,

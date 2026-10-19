@@ -1,12 +1,12 @@
 /**
  * Form validation.
  *
- * One mechanism for every error: `Schema.decodeUnknownEither` + `ArrayFormatter`, which
- * gives a path per field with REAL numeric indices for lists.
+ * One mechanism for every error: `Schema.decodeUnknownResult` + the Standard Schema
+ * formatter, which gives a path per field with REAL numeric indices for lists.
  *
  * @since 0.0.0
  */
-import { Either, Option, ParseResult, Schema, SchemaAST as AST } from 'effect'
+import { Option, Schema, SchemaAST as AST, SchemaIssue } from 'effect'
 import * as Annotation from './Annotation'
 import * as Path from './Path'
 import { getTypeInfo } from './TypeInfo'
@@ -29,17 +29,19 @@ export type Result<A> =
   | { readonly isValid: false; readonly issues: ReadonlyArray<Issue> }
 
 /** `PropertyKey` includes symbols, which cannot address a form field. */
-const isSegment = (k: PropertyKey): k is Path.Segment => typeof k === 'string' || typeof k === 'number'
+const isSegment = (k: unknown): k is Path.Segment => typeof k === 'string' || typeof k === 'number'
+
+const formatter = SchemaIssue.makeFormatterStandardSchemaV1()
 
 /**
- * `ParseError` -> errors by path.
+ * `SchemaError` -> errors by path.
  *
  * @since 0.0.0
  * @category Constructors
  */
-export const fromParseError = (error: ParseResult.ParseError): ReadonlyArray<Issue> =>
-  ParseResult.ArrayFormatter.formatErrorSync(error).map(i => ({
-    path: i.path.filter(isSegment),
+export const fromParseError = (error: Schema.SchemaError): ReadonlyArray<Issue> =>
+  formatter(error.issue).issues.map(i => ({
+    path: (i.path ?? []).filter(isSegment),
     message: i.message,
   }))
 
@@ -82,16 +84,16 @@ const resolve = (ast: AST.AST, path: Path.Path): AST.AST | undefined => {
   let current = ast
   for (const segment of path) {
     const inner = getTypeInfo(current).innerAst
-    if (AST.isTypeLiteral(inner) && typeof segment === 'string') {
+    if (AST.isObjects(inner) && typeof segment === 'string') {
       const ps = inner.propertySignatures.find(p => p.name === segment)
       if (ps === undefined) return undefined
       current = ps.type
       continue
     }
-    if (AST.isTupleType(inner) && typeof segment === 'number') {
+    if (AST.isArrays(inner) && typeof segment === 'number') {
       const rest = inner.rest[0]
       if (rest === undefined) return undefined
-      current = rest.type
+      current = rest
       continue
     }
     return undefined
@@ -114,15 +116,14 @@ const valueAt = (value: unknown, path: Path.Path): unknown =>
  * @since 0.0.0
  * @category Constructors
  */
-export const validate = <A, I, R>(schema: Schema.Schema<A, I, R>, value: unknown): Result<A> => {
-  const decoded = Schema.decodeUnknownEither(schema as Schema.Schema<A, I, never>, {
+export const validate = <A, I, R>(schema: Schema.Codec<A, I, R, unknown>, value: unknown): Result<A> => {
+  const decoded = Schema.decodeUnknownResult(schema as Schema.Codec<A, I, never, unknown>, {
     errors: 'all',
   })(value)
-  return Either.match(decoded, {
-    onLeft: error => ({
-      isValid: false as const,
-      issues: dedupe(overrideMessages(schema.ast, fromParseError(error), value)),
-    }),
-    onRight: v => ({ isValid: true as const, value: v }),
-  })
+  return decoded._tag === 'Failure'
+    ? {
+        isValid: false as const,
+        issues: dedupe(overrideMessages(schema.ast, fromParseError(decoded.failure), value)),
+      }
+    : { isValid: true as const, value: decoded.success }
 }
